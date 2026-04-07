@@ -112,6 +112,33 @@ Open `index.html` in any browser to view the full 7-slide interactive pitch deck
 
 ---
 
+## 👨‍💻 Contributors
+
+<table>
+  <tr>
+    <td align="center">
+      <a href="https://github.com/kainturasourav0-star">
+        <img src="https://github.com/kainturasourav0-star.png" width="100px" style="border-radius:50%" alt="kainturasourav0-star"/><br/>
+        <sub><b>kainturasourav0-star</b></sub>
+      </a><br/>
+      🛡️ Creator &amp; Lead Developer
+    </td>
+  </tr>
+</table>
+
+**Contributions include:**
+- 🎨 Full UI/UX design — 5-screen interactive SPA
+- 🤖 On-device age estimation integration (face-api.js)
+- 🔐 Zero-Knowledge Proof architecture & simulation
+- ⚙️ Node.js / Express backend with JWT token system
+- 📊 Research, legal analysis & privacy compliance review
+- 🎞️ 7-slide interactive pitch deck
+- 📄 Project documentation & research notes
+
+> Want to contribute? Fork the repo, open a PR, or raise an issue!
+
+---
+
 ## 📄 License
 
 MIT License — free to use, modify, and distribute.
@@ -119,3 +146,4 @@ MIT License — free to use, modify, and distribute.
 ---
 
 *🛡️ CryptoAge — Privacy is not a feature. It's the foundation.*
+*Built with ❤️ by [@kainturasourav0-star](https://github.com/kainturasourav0-star)*
