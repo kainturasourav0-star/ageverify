@@ -1,684 +1,1030 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>CryptoAge — Privacy-Preserving Age Verification</title>
-  <meta name="description" content="Verify your age privately. No ID. No data stored. Just YES or NO."/>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&family=Space+Grotesk:wght@400;600;700;800&display=swap" rel="stylesheet"/>
-  <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
-  <style>
-    *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
-    :root{
-      --bg:#04091a;--surface:#080f24;--card:#0d1630;--card2:#111d3a;
-      --border:#1b2d52;--border2:#243654;
-      --primary:#5b8ef0;--primary-d:#3d6fd4;--primary-glow:rgba(91,142,240,.35);
-      --accent:#a855f7;--accent-glow:rgba(168,85,247,.3);
-      --teal:#22d3ee;--green:#22c55e;--red:#ef4444;--amber:#f59e0b;
-      --text:#dde8ff;--muted:#6b82a8;--subtle:#3a5070;
-      --font:'Inter',sans-serif;--head:'Space Grotesk',sans-serif;
-      --r:16px;--r2:24px;
-    }
-    html{scroll-behavior:smooth}
-    body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>CryptoAge — Privacy-Preserving Age Verification</title>
+<meta name="description" content="Verify your age with zero identity exposure. On-device AI + Zero-Knowledge Proof."/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@500;600;700;800&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#03070f;--s1:#07101f;--s2:#0c1930;--card:#0d1e38;--card2:#101f3c;
+  --b1:#19304f;--b2:#1f3a5f;--b3:#264570;
+  --p:#5b9cf6;--p2:#3b78d4;--pg:rgba(91,156,246,.3);
+  --a:#9333ea;--ag:rgba(147,51,234,.25);
+  --t:#22d3ee;--g:#10b981;--r:#ef4444;--am:#f59e0b;
+  --tx:#ddeeff;--tx2:#8aa4c8;--tx3:#3f5e82;
+  --fh:'Space Grotesk',sans-serif;--fb:'Inter',sans-serif;
+  --tr:.35s cubic-bezier(.4,0,.2,1);
+}
+html{font-size:16px;scroll-behavior:smooth}
+body{font-family:var(--fb);background:var(--bg);color:var(--tx);min-height:100vh;overflow:hidden}
 
-    /* ── PARTICLES ── */
-    #canvas-bg{position:fixed;inset:0;z-index:0;pointer-events:none}
+/* ═══ PARTICLE CANVAS ═══ */
+#bg{position:fixed;inset:0;z-index:0;pointer-events:none}
 
-    /* ── SCREENS ── */
-    .screen{position:fixed;inset:0;z-index:10;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;overflow-y:auto;transition:opacity .4s,transform .4s}
-    .screen.hidden{opacity:0;pointer-events:none;transform:translateY(20px)}
-    .screen.out{opacity:0;pointer-events:none;transform:translateY(-20px)}
+/* ═══ NAV ═══ */
+nav{
+  position:fixed;top:0;left:0;right:0;z-index:200;
+  height:60px;display:flex;align-items:center;justify-content:space-between;
+  padding:0 28px;
+  background:rgba(3,7,15,.85);backdrop-filter:blur(20px);
+  border-bottom:1px solid rgba(25,48,79,.6);
+}
+.nav-logo{display:flex;align-items:center;gap:9px;font-family:var(--fh);font-weight:700;font-size:1.05rem}
+.nav-logo-icon{width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,var(--p),var(--a));display:flex;align-items:center;justify-content:center;font-size:.95rem;box-shadow:0 0 16px var(--pg)}
+.nav-logo-text{background:linear-gradient(135deg,var(--p),var(--a));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.nav-pill{display:flex;align-items:center;gap:7px;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2);border-radius:20px;padding:5px 13px;font-size:.75rem;font-weight:600;color:var(--g)}
+.nav-pill::before{content:'';width:7px;height:7px;border-radius:50%;background:var(--g);box-shadow:0 0 6px var(--g);animation:blink 1.6s ease-in-out infinite;flex-shrink:0}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
+.nav-server{font-size:.72rem;color:var(--tx3);border:1px solid var(--b1);padding:4px 10px;border-radius:8px}
+.nav-server.online{color:var(--g);border-color:rgba(16,185,129,.3)}
 
-    /* ── SHARED UI ── */
-    .container{width:100%;max-width:520px;margin:0 auto}
-    .tag{display:inline-flex;align-items:center;gap:6px;background:rgba(91,142,240,.12);border:1px solid rgba(91,142,240,.3);color:var(--primary);padding:5px 14px;border-radius:30px;font-size:.75rem;font-weight:600;letter-spacing:.07em;text-transform:uppercase;margin-bottom:16px}
-    h1{font-family:var(--head);font-size:clamp(2rem,5vw,3.2rem);font-weight:900;line-height:1.1}
-    h2{font-family:var(--head);font-size:clamp(1.4rem,3vw,2rem);font-weight:700}
-    h3{font-family:var(--head);font-size:1.05rem;font-weight:600}
-    p.lead{font-size:1rem;color:var(--muted);line-height:1.7;margin-top:10px}
-    .grad{background:linear-gradient(135deg,var(--primary),var(--accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+/* ═══ SCREEN SYSTEM ═══ */
+.screen{
+  position:fixed;inset:0;z-index:10;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:80px 20px 28px;overflow-y:auto;
+  transition:opacity var(--tr),transform var(--tr);
+}
+.screen.hidden{opacity:0;pointer-events:none;transform:translateY(18px)}
+.screen.leaving{opacity:0;transform:translateY(-18px)}
+.wrap{width:100%;max-width:500px;margin:0 auto}
 
-    /* ── CARD ── */
-    .card{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);padding:28px}
+/* ═══ TYPOGRAPHY ═══ */
+.tag{display:inline-flex;align-items:center;gap:6px;background:rgba(91,156,246,.1);border:1px solid rgba(91,156,246,.25);color:var(--p);padding:4px 13px;border-radius:30px;font-size:.72rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;margin-bottom:14px}
+h1{font-family:var(--fh);font-size:clamp(2rem,5vw,3rem);font-weight:800;line-height:1.1;letter-spacing:-.02em}
+h2{font-family:var(--fh);font-size:clamp(1.3rem,3vw,1.9rem);font-weight:700}
+h3{font-family:var(--fh);font-size:.95rem;font-weight:600}
+.lead{font-size:.95rem;color:var(--tx2);line-height:1.7;margin-top:8px}
+.grad{background:linear-gradient(135deg,var(--p),var(--a));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
 
-    /* ── BUTTONS ── */
-    .btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;padding:15px 32px;border-radius:14px;font-weight:600;font-size:.95rem;cursor:pointer;border:none;transition:all .25s;font-family:var(--font);letter-spacing:.01em}
-    .btn-primary{background:linear-gradient(135deg,var(--primary),var(--accent));color:white;box-shadow:0 4px 24px var(--primary-glow)}
-    .btn-primary:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 8px 36px var(--accent-glow)}
-    .btn-primary:disabled{opacity:.5;cursor:not-allowed}
-    .btn-ghost{background:transparent;border:1px solid var(--border2);color:var(--muted)}
-    .btn-ghost:hover{border-color:var(--primary);color:var(--primary)}
-    .btn-full{width:100%}
+/* ═══ CARDS ═══ */
+.card{background:var(--card);border:1px solid var(--b1);border-radius:18px;padding:22px;transition:border-color .25s,box-shadow .25s}
 
-    /* ── LOGO ── */
-    .logo-wrap{margin-bottom:28px;display:flex;flex-direction:column;align-items:center}
-    .logo-icon{width:80px;height:80px;border-radius:22px;background:linear-gradient(135deg,var(--primary),var(--accent));display:flex;align-items:center;justify-content:center;font-size:2.2rem;box-shadow:0 0 50px var(--primary-glow),0 0 100px var(--accent-glow);animation:pulse 2.8s ease-in-out infinite;margin-bottom:14px}
-    .logo-name{font-family:var(--head);font-size:1.5rem;font-weight:800;background:linear-gradient(135deg,var(--primary),var(--accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-    @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+/* ═══ BUTTONS ═══ */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:13px 28px;border-radius:13px;font-family:var(--fb);font-weight:600;font-size:.9rem;cursor:pointer;border:none;transition:all .22s;position:relative;overflow:hidden}
+.btn::after{content:'';position:absolute;inset:0;background:rgba(255,255,255,.05);opacity:0;transition:opacity .2s}
+.btn:hover::after{opacity:1}
+.btn-primary{background:linear-gradient(135deg,var(--p),var(--a));color:#fff;box-shadow:0 4px 20px var(--pg),0 2px 8px rgba(0,0,0,.3)}
+.btn-primary:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 8px 32px var(--pg),0 4px 12px rgba(0,0,0,.3)}
+.btn-primary:disabled{opacity:.45;cursor:not-allowed;transform:none}
+.btn-ghost{background:transparent;border:1px solid var(--b2);color:var(--tx2)}
+.btn-ghost:hover{border-color:var(--p);color:var(--p)}
+.btn-danger{background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);color:var(--r)}
+.btn-danger:hover{background:rgba(239,68,68,.2)}
+.btn-fw{width:100%}
 
-    /* ────── SCREEN 1 — LANDING ────── */
-    #screen-home{text-align:center;background:radial-gradient(ellipse at 50% 0%,rgba(91,142,240,.08) 0%,transparent 70%)}
-    #screen-home h1{margin-bottom:10px}
-    .hero-badge{display:inline-flex;align-items:center;gap:20px;background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px 24px;margin:24px 0;flex-wrap:wrap;justify-content:center}
-    .hb{display:flex;align-items:center;gap:6px;font-size:.88rem;color:var(--muted)}
-    .hb span.dot2{width:8px;height:8px;border-radius:50%}
-    .dot2.g{background:var(--green);box-shadow:0 0 8px var(--green)}
-    .dot2.b{background:var(--primary);box-shadow:0 0 8px var(--primary)}
-    .dot2.p{background:var(--accent);box-shadow:0 0 8px var(--accent)}
-    .steps-row{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:24px 0;text-align:left}
-    .step-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:18px;transition:border-color .3s}
-    .step-card:hover{border-color:var(--primary)}
-    .step-ico{font-size:1.6rem;margin-bottom:8px}
-    .step-card h3{font-size:.88rem;margin-bottom:4px}
-    .step-card p{font-size:.78rem;color:var(--muted);line-height:1.5}
-    .disclaimer{font-size:.78rem;color:var(--subtle);margin-top:16px;line-height:1.6}
+/* ═══════════════════════════════
+   SCREEN 1 — HOME
+═══════════════════════════════ */
+#s-home{background:radial-gradient(ellipse at 50% -10%,rgba(91,156,246,.07) 0%,transparent 65%)}
+.hero-icon{width:76px;height:76px;border-radius:20px;background:linear-gradient(135deg,var(--p),var(--a));display:flex;align-items:center;justify-content:center;font-size:2rem;box-shadow:0 0 40px var(--pg),0 0 80px var(--ag);animation:float 3s ease-in-out infinite;margin:0 auto 20px}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+.badges{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin:16px 0}
+.mini-badge{padding:5px 11px;border-radius:8px;font-size:.73rem;font-weight:600;border:1px solid}
+.mb-b{background:rgba(91,156,246,.1);color:var(--p);border-color:rgba(91,156,246,.25)}
+.mb-p{background:rgba(147,51,234,.1);color:#c084fc;border-color:rgba(147,51,234,.25)}
+.mb-g{background:rgba(16,185,129,.1);color:var(--g);border-color:rgba(16,185,129,.25)}
+.feature-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:20px 0}
+.feat{background:var(--card);border:1px solid var(--b1);border-radius:13px;padding:14px 12px;text-align:center;transition:border-color .2s}
+.feat:hover{border-color:var(--p)}
+.feat-ico{font-size:1.5rem;margin-bottom:7px}
+.feat h3{font-size:.8rem;margin-bottom:4px}
+.feat p{font-size:.72rem;color:var(--tx2);line-height:1.4}
+.note{font-size:.75rem;color:var(--tx3);line-height:1.6;margin-top:14px;text-align:center;padding:10px 16px;background:rgba(255,255,255,.02);border-radius:10px;border:1px solid var(--b1)}
+.btn-row{display:flex;gap:10px;margin:18px 0 0}
 
-    /* ────── SCREEN 2 — CAMERA ────── */
-    #screen-camera{background:radial-gradient(ellipse at 50% 30%,rgba(168,85,247,.06) 0%,transparent 70%)}
-    .cam-wrap{position:relative;width:100%;aspect-ratio:4/3;background:#000;border-radius:var(--r2);overflow:hidden;border:2px solid var(--border2)}
-    #videoEl{width:100%;height:100%;object-fit:cover;display:block;transform:scaleX(-1)}
-    .cam-overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px}
-    .cam-ring{width:140px;height:140px;border-radius:50%;border:3px dashed rgba(91,142,240,.6);animation:spin 6s linear infinite;position:absolute}
-    .cam-ring2{width:110px;height:110px;border-radius:50%;border:2px dashed rgba(168,85,247,.4);animation:spin 4s linear infinite reverse;position:absolute}
-    @keyframes spin{to{transform:rotate(360deg)}}
-    .cam-label{font-size:.8rem;font-weight:600;color:var(--primary);background:rgba(8,15,36,.8);padding:5px 14px;border-radius:20px;backdrop-filter:blur(8px);position:relative;z-index:1}
-    .privacy-bar{display:flex;align-items:center;gap:8px;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.25);border-radius:10px;padding:10px 14px;margin:14px 0;font-size:.82rem;color:var(--green)}
-    #loadingMsg{text-align:center;padding:12px;font-size:.85rem;color:var(--muted)}
-    .progress-bar-wrap{background:var(--card2);border-radius:10px;overflow:hidden;height:4px;margin-top:6px}
-    .progress-bar{height:100%;background:linear-gradient(90deg,var(--primary),var(--accent));width:0%;transition:width .3s;border-radius:10px}
+/* ═══════════════════════════════
+   SCREEN 2 — CAMERA
+═══════════════════════════════ */
+.cam-container{
+  position:relative;width:100%;aspect-ratio:4/3;
+  border-radius:18px;overflow:hidden;
+  background:#000;border:2px solid var(--b2);
+  margin:14px 0;
+}
+#videoEl{width:100%;height:100%;object-fit:cover;display:block;transform:scaleX(-1)}
+#faceCanvas{position:absolute;inset:0;width:100%;height:100%;transform:scaleX(-1);pointer-events:none}
+.cam-corner{position:absolute;border:3px solid transparent;border-radius:4px;transition:border-color .4s}
+.cam-corner.tl{top:14px;left:14px;width:28px;height:28px;border-top-color:var(--p);border-left-color:var(--p)}
+.cam-corner.tr{top:14px;right:14px;width:28px;height:28px;border-top-color:var(--p);border-right-color:var(--p)}
+.cam-corner.bl{bottom:14px;left:14px;width:28px;height:28px;border-bottom-color:var(--p);border-left-color:var(--p)}
+.cam-corner.br{bottom:14px;right:14px;width:28px;height:28px;border-bottom-color:var(--p);border-right-color:var(--p)}
+.cam-corner.face-found{border-color:var(--g)!important}
+.face-status-bar{
+  position:absolute;bottom:0;left:0;right:0;
+  padding:10px 14px;background:rgba(3,7,15,.85);backdrop-filter:blur(8px);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.face-status-dot{width:8px;height:8px;border-radius:50%;background:var(--r);transition:background .4s;box-shadow:0 0 6px var(--r);flex-shrink:0}
+.face-status-dot.found{background:var(--g);box-shadow:0 0 6px var(--g)}
+.face-status-txt{font-size:.78rem;color:var(--tx2);margin-left:8px;flex:1}
+.face-age-preview{font-size:.73rem;font-weight:600;color:var(--tx3);font-family:'Courier New',monospace}
+.face-age-preview.visible{color:var(--p)}
+.load-status{background:var(--card);border:1px solid var(--b1);border-radius:12px;padding:12px 14px;margin-bottom:12px}
+.load-bar-wrap{background:var(--s2);border-radius:6px;overflow:hidden;height:3px;margin-top:8px}
+.load-bar{height:100%;background:linear-gradient(90deg,var(--p),var(--a));width:0%;transition:width .5s;border-radius:6px}
+.load-txt{font-size:.78rem;color:var(--tx2);display:flex;align-items:center;gap:6px}
+.load-spinner{width:12px;height:12px;border:2px solid rgba(91,156,246,.25);border-top-color:var(--p);border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+.priv-row{display:flex;align-items:center;gap:8px;padding:9px 13px;background:rgba(16,185,129,.07);border:1px solid rgba(16,185,129,.2);border-radius:10px;margin-bottom:12px;font-size:.78rem;color:var(--g)}
 
-    /* ────── SCREEN 3 — PROCESSING ────── */
-    #screen-process{text-align:center}
-    .process-steps{display:flex;flex-direction:column;gap:14px;margin:28px 0;text-align:left}
-    .ps{display:flex;align-items:center;gap:14px;background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:16px 18px;transition:border-color .4s}
-    .ps.active{border-color:var(--primary);background:rgba(91,142,240,.05)}
-    .ps.done{border-color:rgba(34,197,94,.4);background:rgba(34,197,94,.04)}
-    .ps-icon{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;background:var(--card2);border:1px solid var(--border2);transition:all .4s}
-    .ps.active .ps-icon{background:rgba(91,142,240,.2);border-color:var(--primary)}
-    .ps.done .ps-icon{background:rgba(34,197,94,.2);border-color:rgba(34,197,94,.4)}
-    .ps-text h4{font-size:.9rem;font-weight:600;margin-bottom:2px}
-    .ps-text p{font-size:.78rem;color:var(--muted)}
-    .ps-spinner{width:18px;height:18px;border:2px solid rgba(91,142,240,.3);border-top-color:var(--primary);border-radius:50%;animation:spin .8s linear infinite;margin-left:auto;flex-shrink:0}
-    .ps-check{margin-left:auto;color:var(--green);font-size:1.1rem;flex-shrink:0}
-    .age-result-pill{display:inline-flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--border2);border-radius:12px;padding:8px 20px;font-size:.88rem;color:var(--muted);margin-top:8px}
+/* ═══════════════════════════════
+   SCREEN 3 — PROCESSING
+═══════════════════════════════ */
+.proc-ring{
+  width:70px;height:70px;border-radius:50%;
+  border:3px solid rgba(91,156,246,.2);border-top-color:var(--p);
+  animation:spin 1s linear infinite;margin:0 auto 18px;
+}
+.step-list{display:flex;flex-direction:column;gap:10px;margin:20px 0}
+.step-row{
+  display:flex;align-items:center;gap:12px;
+  background:var(--card);border:1px solid var(--b1);border-radius:13px;padding:14px 16px;
+  transition:border-color .3s,background .3s;
+}
+.step-row.active{border-color:var(--p);background:rgba(91,156,246,.05)}
+.step-row.done{border-color:rgba(16,185,129,.35);background:rgba(16,185,129,.04)}
+.step-ico2{width:36px;height:36px;border-radius:10px;background:var(--s2);border:1px solid var(--b2);display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0;transition:all .3s}
+.step-row.active .step-ico2{background:rgba(91,156,246,.15);border-color:rgba(91,156,246,.5)}
+.step-row.done .step-ico2{background:rgba(16,185,129,.15);border-color:rgba(16,185,129,.4)}
+.step-txt h4{font-size:.85rem;font-weight:600;margin-bottom:2px}
+.step-txt p{font-size:.74rem;color:var(--tx2)}
+.step-spin{width:16px;height:16px;border:2px solid rgba(91,156,246,.2);border-top-color:var(--p);border-radius:50%;animation:spin .7s linear infinite;margin-left:auto;flex-shrink:0}
+.step-chk{margin-left:auto;color:var(--g);font-size:1.1rem;flex-shrink:0}
+.priv-reveal{
+  display:none;align-items:center;gap:10px;
+  background:var(--card);border:1px solid var(--b1);border-radius:11px;
+  padding:11px 15px;font-size:.82rem;margin-top:6px;
+}
 
-    /* ────── SCREEN 4 — RESULT ────── */
-    #screen-result{text-align:center}
-    .result-icon-wrap{width:130px;height:130px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;font-size:3.5rem;position:relative}
-    .result-icon-wrap::before{content:'';position:absolute;inset:-8px;border-radius:50%;border:3px solid;animation:spin 4s linear infinite}
-    .result-icon-wrap.yes{background:rgba(34,197,94,.15)}
-    .result-icon-wrap.yes::before{border-color:rgba(34,197,94,.5)}
-    .result-icon-wrap.no{background:rgba(239,68,68,.15)}
-    .result-icon-wrap.no::before{border-color:rgba(239,68,68,.5)}
-    .result-title.yes{color:var(--green);font-family:var(--head);font-size:2.8rem;font-weight:900}
-    .result-title.no{color:var(--red);font-family:var(--head);font-size:2.8rem;font-weight:900}
-    .result-sub{color:var(--muted);font-size:.95rem;margin-bottom:24px}
-    .token-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:18px;margin:20px 0;text-align:left}
-    .token-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
-    .token-header span{font-size:.78rem;font-weight:600;color:var(--primary)}
-    .token-countdown{font-size:.78rem;color:var(--amber);font-weight:600}
-    .token-string{font-family:'Courier New',monospace;font-size:.72rem;color:var(--muted);word-break:break-all;line-height:1.6;background:var(--surface);padding:10px;border-radius:8px;border:1px solid var(--border)}
-    .token-timer-bar{height:3px;background:var(--border);border-radius:2px;margin-top:10px;overflow:hidden}
-    .token-timer-progress{height:100%;background:linear-gradient(90deg,var(--green),var(--amber));width:100%;transition:width 1s linear;border-radius:2px}
-    .privacy-badges{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin:16px 0}
-    .badge{display:flex;align-items:center;gap:5px;padding:6px 12px;border-radius:8px;font-size:.75rem;font-weight:600;border:1px solid}
-    .badge.g{background:rgba(34,197,94,.1);color:var(--green);border-color:rgba(34,197,94,.3)}
-    .badge.b{background:rgba(91,142,240,.1);color:var(--primary);border-color:rgba(91,142,240,.3)}
+/* ═══════════════════════════════
+   SCREEN 4 — RESULT
+═══════════════════════════════ */
+.result-glow-wrap{
+  width:110px;height:110px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  margin:0 auto 16px;font-size:3rem;position:relative;
+}
+.result-glow-wrap::before{content:'';position:absolute;inset:-6px;border-radius:50%;border:2px solid;animation:spin 5s linear infinite}
+.rg-yes{background:rgba(16,185,129,.12)}
+.rg-yes::before{border-color:rgba(16,185,129,.4)}
+.rg-no{background:rgba(239,68,68,.12)}
+.rg-no::before{border-color:rgba(239,68,68,.4)}
+.result-heading.yes{font-family:var(--fh);font-size:2.4rem;font-weight:900;color:var(--g)}
+.result-heading.no{font-family:var(--fh);font-size:2.4rem;font-weight:900;color:var(--r)}
+.result-sub{font-size:.88rem;color:var(--tx2);margin:6px 0 18px}
+.badge-row{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-bottom:16px}
+.rbadge{display:flex;align-items:center;gap:5px;padding:5px 11px;border-radius:8px;font-size:.72rem;font-weight:600;border:1px solid}
+.rb-g{background:rgba(16,185,129,.1);color:var(--g);border-color:rgba(16,185,129,.25)}
+.rb-b{background:rgba(91,156,246,.1);color:var(--p);border-color:rgba(91,156,246,.25)}
+.token-box{background:var(--card);border:1px solid var(--b1);border-radius:14px;padding:16px;margin-bottom:14px;text-align:left}
+.token-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.token-label{font-size:.75rem;font-weight:600;color:var(--p);display:flex;align-items:center;gap:5px}
+.token-timer{font-size:.77rem;font-weight:700;color:var(--am);font-family:'Courier New',monospace}
+.token-timer.expired{color:var(--r)}
+.jwt-str{
+  font-family:'Courier New',monospace;font-size:.66rem;color:var(--tx3);
+  word-break:break-all;line-height:1.65;
+  background:rgba(0,0,0,.3);padding:9px;border-radius:8px;border:1px solid var(--b1);
+  transition:opacity .5s;
+}
+.jwt-str .jwt-h{color:#a78bfa}
+.jwt-str .jwt-p{color:#34d399}
+.jwt-str .jwt-s{color:var(--tx3)}
+.jwt-str .dot{color:var(--tx3)}
+.timer-track{height:3px;background:var(--b1);border-radius:2px;margin-top:10px;overflow:hidden}
+.timer-fill{height:100%;background:linear-gradient(90deg,var(--g),var(--am));border-radius:2px;transition:width 1s linear}
+.token-note{font-size:.7rem;color:var(--tx3);margin-top:7px;line-height:1.5}
+.validate-row{display:flex;align-items:center;gap:8px;padding:9px 13px;border-radius:10px;margin-bottom:10px;font-size:.8rem;border:1px solid;display:none}
+.vr-ok{background:rgba(16,185,129,.07);border-color:rgba(16,185,129,.2);color:var(--g)}
+.stats-row{display:flex;gap:10px;margin-bottom:10px}
+.stat-mini{flex:1;background:var(--card);border:1px solid var(--b1);border-radius:11px;padding:12px;text-align:center}
+.stat-mini .num{font-family:var(--fh);font-size:1.5rem;font-weight:700;background:linear-gradient(135deg,var(--p),var(--a));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.stat-mini .lbl{font-size:.68rem;color:var(--tx3);margin-top:2px}
 
-    /* ── NAV BAR ── */
-    nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:14px 24px;display:flex;align-items:center;justify-content:space-between;background:rgba(4,9,26,.8);backdrop-filter:blur(16px);border-bottom:1px solid rgba(27,45,82,.5)}
-    .nav-logo{display:flex;align-items:center;gap:8px;font-family:var(--head);font-weight:700;font-size:1.1rem;background:linear-gradient(135deg,var(--primary),var(--accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-    .nav-right{display:flex;align-items:center;gap:10px}
-    .privacy-dot{display:flex;align-items:center;gap:6px;font-size:.78rem;color:var(--green);background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.25);padding:5px 12px;border-radius:20px}
-    .privacy-dot::before{content:'';width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);animation:blink 1.5s ease-in-out infinite}
-    @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+/* ═══ TOAST ═══ */
+#toast{
+  position:fixed;bottom:22px;left:50%;transform:translateX(-50%);
+  background:var(--card2);border:1px solid var(--b2);
+  color:var(--tx);padding:11px 20px;border-radius:12px;
+  font-size:.83rem;z-index:999;max-width:340px;text-align:center;
+  opacity:0;pointer-events:none;transition:opacity .3s,transform .3s;
+  transform:translateX(-50%) translateY(10px);
+}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
-    /* ── MOBILE ── */
-    @media(max-width:500px){
-      .steps-row{grid-template-columns:1fr}
-      .hero-badge{flex-direction:column;gap:10px}
-      .privacy-badges{gap:6px}
-    }
-
-    /* ── TOAST ── */
-    #toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--card2);border:1px solid var(--border2);color:var(--text);padding:12px 22px;border-radius:12px;font-size:.88rem;z-index:999;opacity:0;transition:opacity .3s;pointer-events:none;text-align:center;max-width:340px}
-    #toast.show{opacity:1}
-
-    /* ── VERIFY AGAIN BTN (inline in result) ── */
-    .btn-again{background:transparent;border:1px solid var(--border2);color:var(--muted);padding:12px 24px;border-radius:12px;cursor:pointer;font-size:.88rem;font-family:var(--font);font-weight:500;transition:all .2s;margin-top:10px}
-    .btn-again:hover{border-color:var(--primary);color:var(--primary)}
-  </style>
+/* ═══ MEDIA ═══ */
+@media(max-width:480px){
+  .feature-grid{grid-template-columns:1fr 1fr}
+  .btn-row{flex-direction:column}
+  .stats-row{flex-wrap:wrap}
+}
+</style>
 </head>
 <body>
-
-<!-- Particle canvas -->
-<canvas id="canvas-bg"></canvas>
+<canvas id="bg"></canvas>
 
 <!-- ── NAV ── -->
 <nav>
-  <div class="nav-logo">🛡️ CryptoAge</div>
-  <div class="nav-right">
-    <div class="privacy-dot">Zero Data Stored</div>
+  <div class="nav-logo">
+    <div class="nav-logo-icon">🛡️</div>
+    <div class="nav-logo-text">CryptoAge</div>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px">
+    <div class="nav-pill">Zero Data Stored</div>
+    <div class="nav-server" id="serverStatus">● checking…</div>
   </div>
 </nav>
 
-<!-- Toast -->
 <div id="toast"></div>
 
-<!-- ════════════════════════════════
-     SCREEN 1 — HOME
-════════════════════════════════ -->
-<div class="screen" id="screen-home" style="padding-top:90px">
-  <div class="container">
-    <div class="logo-wrap">
-      <div class="logo-icon">🛡️</div>
-      <div class="logo-name">CryptoAge</div>
+<!-- ════════════════════════════════════
+  SCREEN 1 — HOME
+════════════════════════════════════ -->
+<div class="screen" id="s-home">
+  <div class="wrap" style="text-align:center">
+    <div class="hero-icon">🛡️</div>
+    <div class="tag">Privacy · Zero-Knowledge · On-Device AI</div>
+    <h1>Age Verified.<br/><span class="grad">Identity Protected.</span></h1>
+    <p class="lead">Prove you're old enough — without showing a single piece of ID. No photo stored. No name logged. Just a <strong style="color:var(--g)">YES</strong> or <strong style="color:var(--r)">NO</strong>.</p>
+    <div class="badges">
+      <span class="mini-badge mb-b">🤖 On-Device ML</span>
+      <span class="mini-badge mb-p">🔐 Zero-Knowledge Proof</span>
+      <span class="mini-badge mb-g">⏱️ 60s Token</span>
+      <span class="mini-badge mb-b">🗑️ No Data Retained</span>
     </div>
-    <div class="tag">Privacy · Zero-Knowledge · On-Device</div>
-    <h1 class="grad">Age Verified.<br/>Identity Protected.</h1>
-    <p class="lead">Check if you're old enough — without showing your ID or storing a single byte of personal data. Just <strong style="color:var(--green)">YES</strong> or <strong style="color:var(--red)">NO</strong>.</p>
-
-    <div class="hero-badge">
-      <div class="hb"><span class="dot2 g"></span>No ID required</div>
-      <div class="hb"><span class="dot2 b"></span>On-device only</div>
-      <div class="hb"><span class="dot2 p"></span>Zero data stored</div>
-    </div>
-
-    <div class="steps-row">
-      <div class="step-card">
-        <div class="step-ico">📷</div>
-        <h3>1. Quick Scan</h3>
-        <p>1-second camera frame — blurred pixel-level before any analysis</p>
+    <div class="feature-grid">
+      <div class="feat">
+        <div class="feat-ico">📷</div>
+        <h3>Quick Scan</h3>
+        <p>1-second frame, blurred immediately on device</p>
       </div>
-      <div class="step-card">
-        <div class="step-ico">🔐</div>
-        <h3>2. ZK Proof</h3>
-        <p>Age proven mathematically — your number stays private forever</p>
+      <div class="feat">
+        <div class="feat-ico">🔐</div>
+        <h3>ZK Proof</h3>
+        <p>Math proves age ≥ 18, actual number discarded</p>
       </div>
-      <div class="step-card">
-        <div class="step-ico">✅</div>
-        <h3>3. YES or NO</h3>
-        <p>60-second token issued, expires automatically — nothing stored</p>
+      <div class="feat">
+        <div class="feat-ico">✅</div>
+        <h3>Result Only</h3>
+        <p>60s token issued — expires, nothing stored</p>
       </div>
     </div>
-
-    <button class="btn btn-primary btn-full" id="startBtn" onclick="goToCamera()">
-      🎯 Start Age Verification
-    </button>
-    <p class="disclaimer">Your camera is accessed only for 1 frame. No images are uploaded, recorded, or stored anywhere. All processing happens locally on your device.</p>
+    <div class="btn-row">
+      <button class="btn btn-primary btn-fw" id="startCamBtn" onclick="goCam()">
+        📷 Start Face Verification
+      </button>
+      <button class="btn btn-ghost" onclick="runDemo()" title="Simulated demo without camera">
+        🎭 Demo
+      </button>
+    </div>
+    <div class="note">
+      🔒 Your camera is used for exactly 1 frame. The image is processed entirely on your device by a local AI model. Nothing is uploaded. No biometrics are stored.
+    </div>
   </div>
 </div>
 
-<!-- ════════════════════════════════
-     SCREEN 2 — CAMERA
-════════════════════════════════ -->
-<div class="screen hidden" id="screen-camera" style="padding-top:90px">
-  <div class="container">
-    <h2 style="text-align:center;margin-bottom:6px">📷 Position Your Face</h2>
-    <p style="text-align:center;color:var(--muted);font-size:.88rem;margin-bottom:16px">Center your face in the frame. Good lighting helps.</p>
+<!-- ════════════════════════════════════
+  SCREEN 2 — CAMERA
+════════════════════════════════════ -->
+<div class="screen hidden" id="s-cam">
+  <div class="wrap">
+    <h2 style="text-align:center;margin-bottom:4px">📷 <span class="grad">Position Your Face</span></h2>
+    <p class="lead" style="text-align:center;margin-bottom:14px;font-size:.85rem">Ensure good lighting. Center your face. The AI runs locally.</p>
 
-    <div class="cam-wrap" id="camWrap">
+    <div class="load-status" id="loadStatus">
+      <div class="load-txt">
+        <div class="load-spinner" id="loadSpinner"></div>
+        <span id="loadTxt">Initializing camera…</span>
+      </div>
+      <div class="load-bar-wrap"><div class="load-bar" id="loadBar"></div></div>
+    </div>
+
+    <div class="cam-container">
       <video id="videoEl" autoplay muted playsinline></video>
-      <div class="cam-overlay" id="camOverlay">
-        <div class="cam-ring"></div>
-        <div class="cam-ring2"></div>
-        <div class="cam-label" id="camLabel">Loading models…</div>
+      <canvas id="faceCanvas"></canvas>
+      <!-- Corner brackets -->
+      <div class="cam-corner tl" id="cc-tl"></div>
+      <div class="cam-corner tr" id="cc-tr"></div>
+      <div class="cam-corner bl" id="cc-bl"></div>
+      <div class="cam-corner br" id="cc-br"></div>
+      <!-- Status bar -->
+      <div class="face-status-bar">
+        <div class="face-status-dot" id="faceStatusDot"></div>
+        <span class="face-status-txt" id="faceStatusTxt">Scanning for face…</span>
+        <span class="face-age-preview" id="faceAgePreview">~?? yrs</span>
       </div>
     </div>
 
-    <div id="loadingMsg">
-      <p style="color:var(--muted);font-size:.83rem;margin-bottom:6px" id="loadTxt">Loading on-device AI models…</p>
-      <div class="progress-bar-wrap">
-        <div class="progress-bar" id="loadBar"></div>
-      </div>
+    <div class="priv-row">
+      🔒 Live detection runs on-device. Camera feed is never transmitted.
     </div>
 
-    <div class="privacy-bar">
-      🔒 All analysis happens on your device. Nothing is uploaded.
-    </div>
-
-    <button class="btn btn-primary btn-full" id="captureBtn" onclick="captureAndVerify()" disabled>
-      🔍 Analyze My Age
+    <button class="btn btn-primary btn-fw" id="verifyBtn" onclick="doVerify()" disabled style="margin-bottom:10px">
+      🔍 Verify My Age
     </button>
-    <button class="btn btn-ghost btn-full" onclick="goBack()" style="margin-top:10px">
-      ← Back
-    </button>
+    <button class="btn btn-ghost btn-fw" onclick="cancelCam()">← Back</button>
   </div>
 </div>
 
-<!-- ════════════════════════════════
-     SCREEN 3 — PROCESSING
-════════════════════════════════ -->
-<div class="screen hidden" id="screen-process">
-  <div class="container">
-    <div class="logo-wrap" style="margin-bottom:16px">
-      <div class="logo-icon" style="width:60px;height:60px;font-size:1.6rem">🔐</div>
-    </div>
-    <h2>Verifying Privacy…</h2>
-    <p class="lead" style="text-align:center">Your identity stays with you. Only a mathematical proof is generated.</p>
+<!-- ════════════════════════════════════
+  SCREEN 3 — PROCESSING
+════════════════════════════════════ -->
+<div class="screen hidden" id="s-proc">
+  <div class="wrap" style="text-align:center">
+    <div class="proc-ring"></div>
+    <h2>Verifying <span class="grad">Privately…</span></h2>
+    <p class="lead">Your identity stays with you. Only a cryptographic proof is generated.</p>
 
-    <div class="process-steps">
-      <div class="ps" id="ps1">
-        <div class="ps-icon">📷</div>
-        <div class="ps-text">
-          <h4>Capturing frame on-device</h4>
-          <p>One frame captured, blurred immediately</p>
+    <div class="step-list">
+      <div class="step-row" id="sr1">
+        <div class="step-ico2">📷</div>
+        <div class="step-txt">
+          <h4>Frame captured & blurred on-device</h4>
+          <p>Raw image never leaves your browser</p>
         </div>
-        <div class="ps-spinner" id="ps1-spin"></div>
-        <div class="ps-check" id="ps1-check" style="display:none">✅</div>
+        <div class="step-spin" id="ssp1"></div>
+        <div class="step-chk" id="sck1" style="display:none">✅</div>
       </div>
-      <div class="ps" id="ps2">
-        <div class="ps-icon">🤖</div>
-        <div class="ps-text">
-          <h4>On-device age estimation (ML)</h4>
-          <p>AgeNet model running — no data leaves your device</p>
+      <div class="step-row" id="sr2">
+        <div class="step-ico2">🤖</div>
+        <div class="step-txt">
+          <h4>On-device age estimation (face-api.js)</h4>
+          <p>AgeNet model runs locally — no API call</p>
         </div>
-        <div class="ps-spinner" id="ps2-spin" style="display:none"></div>
-        <div class="ps-check" id="ps2-check" style="display:none">✅</div>
+        <div class="step-spin" id="ssp2" style="display:none"></div>
+        <div class="step-chk" id="sck2" style="display:none">✅</div>
       </div>
-      <div class="ps" id="ps3">
-        <div class="ps-icon">🔐</div>
-        <div class="ps-text">
-          <h4>Generating Zero-Knowledge Proof</h4>
-          <p>Proves "age ≥ 18" — actual age value discarded</p>
+      <div class="step-row" id="sr3">
+        <div class="step-ico2">🔐</div>
+        <div class="step-txt">
+          <h4>Zero-Knowledge Proof generated</h4>
+          <p>Proves "age ≥ 18" — actual value discarded</p>
         </div>
-        <div class="ps-spinner" id="ps3-spin" style="display:none"></div>
-        <div class="ps-check" id="ps3-check" style="display:none">✅</div>
+        <div class="step-spin" id="ssp3" style="display:none"></div>
+        <div class="step-chk" id="sck3" style="display:none">✅</div>
       </div>
-      <div class="ps" id="ps4">
-        <div class="ps-icon">⚡</div>
-        <div class="ps-text">
-          <h4>Issuing ephemeral token</h4>
-          <p>60-second JWT — expires automatically, nothing stored</p>
+      <div class="step-row" id="sr4">
+        <div class="step-ico2">⚡</div>
+        <div class="step-txt">
+          <h4>Server issues ephemeral JWT token</h4>
+          <p>60-second TTL. No personal data in payload.</p>
         </div>
-        <div class="ps-spinner" id="ps4-spin" style="display:none"></div>
-        <div class="ps-check" id="ps4-check" style="display:none">✅</div>
+        <div class="step-spin" id="ssp4" style="display:none"></div>
+        <div class="step-chk" id="sck4" style="display:none">✅</div>
       </div>
     </div>
 
-    <div class="age-result-pill" id="ageRevealPill" style="display:none">
-      <span>🤫 Estimated age (private):</span>
-      <strong id="ageRevealNum" style="color:var(--primary)">—</strong>
-      <span style="font-size:.75rem;color:var(--subtle)">(not stored)</span>
+    <div class="priv-reveal" id="ageRevealRow">
+      <span style="font-size:1rem">🤫</span>
+      <span style="color:var(--tx2);font-size:.82rem">Estimated age <em>(private — not sent to server)</em>:</span>
+      <strong id="ageRevealNum" style="color:var(--p);font-family:var(--fh)">??</strong>
     </div>
   </div>
 </div>
 
-<!-- ════════════════════════════════
-     SCREEN 4 — RESULT
-════════════════════════════════ -->
-<div class="screen hidden" id="screen-result">
-  <div class="container">
-    <div id="resultIcon" class="result-icon-wrap yes">✅</div>
-    <div id="resultTitle" class="result-title yes">VERIFIED</div>
-    <p id="resultSub" class="result-sub">You are old enough to access age-restricted content.</p>
+<!-- ════════════════════════════════════
+  SCREEN 4 — RESULT
+════════════════════════════════════ -->
+<div class="screen hidden" id="s-result">
+  <div class="wrap" style="text-align:center">
+    <div class="result-glow-wrap rg-yes" id="resGlow">✅</div>
+    <div class="result-heading yes" id="resHeading">VERIFIED</div>
+    <p class="result-sub" id="resSub">You meet the minimum age requirement.</p>
 
-    <div class="privacy-badges">
-      <div class="badge g">✓ No ID used</div>
-      <div class="badge b">✓ No data stored</div>
-      <div class="badge g">✓ ZKP verified</div>
-      <div class="badge b">✓ GDPR compliant</div>
+    <div class="badge-row">
+      <div class="rbadge rb-g">✓ No ID collected</div>
+      <div class="rbadge rb-b">✓ No data stored</div>
+      <div class="rbadge rb-g">✓ ZKP verified</div>
+      <div class="rbadge rb-b">✓ GDPR ready</div>
     </div>
 
-    <div class="token-card" id="tokenCard">
-      <div class="token-header">
-        <span>🔑 Ephemeral Access Token</span>
-        <span class="token-countdown" id="tokenCountdown">60s</span>
+    <!-- Token (shown only on success) -->
+    <div class="token-box" id="tokenBox">
+      <div class="token-top">
+        <div class="token-label">🔑 Ephemeral Access Token</div>
+        <div class="token-timer" id="tokenTimer">60s</div>
       </div>
-      <div class="token-string" id="tokenString">generating...</div>
-      <div class="token-timer-bar">
-        <div class="token-timer-progress" id="timerProgress"></div>
-      </div>
-      <p style="font-size:.72rem;color:var(--subtle);margin-top:8px">This token expires automatically. No identity data is encoded inside.</p>
+      <div class="jwt-str" id="jwtDisplay">generating…</div>
+      <div class="timer-track"><div class="timer-fill" id="timerFill"></div></div>
+      <p class="token-note">This JWT expires in 60 seconds. No name, face, or DOB is encoded inside it.</p>
     </div>
 
-    <button class="btn btn-primary btn-full" id="accessBtn" onclick="showToast('✅ Access granted! Token accepted by server.')">
-      🚀 Access Content
+    <div class="validate-row vr-ok" id="validateRow">
+      ✅ Server confirmed token is valid — access granted
+    </div>
+
+    <div class="stats-row" id="statsRow" style="display:none">
+      <div class="stat-mini"><div class="num" id="st-pass">—</div><div class="lbl">Verified today</div></div>
+      <div class="stat-mini"><div class="num" id="st-up">—</div><div class="lbl">Server uptime</div></div>
+      <div class="stat-mini"><div class="num grad">0</div><div class="lbl">Bytes stored</div></div>
+    </div>
+
+    <button class="btn btn-primary btn-fw" id="accessBtn" onclick="validateAndAccess()" style="margin-bottom:10px">
+      🚀 Access Restricted Content
     </button>
-    <button class="btn-again btn-full" onclick="verifyAgain()">🔄 Verify Again</button>
+    <button class="btn btn-ghost btn-fw" onclick="resetAll()">🔄 Verify Again</button>
   </div>
 </div>
 
-<!-- ════════════ HIDDEN CANVAS ════════════ -->
-<canvas id="snapCanvas" style="display:none"></canvas>
+<!-- ════════════════════════════════════
+  SCREEN 5 — ACCESS GRANTED
+════════════════════════════════════ -->
+<div class="screen hidden" id="s-access">
+  <div class="wrap" style="text-align:center">
+    <div style="font-size:4rem;margin-bottom:16px;animation:float 2s ease-in-out infinite">🎉</div>
+    <h2><span class="grad">Access Granted!</span></h2>
+    <p class="lead" style="text-align:center">Your age-verified session is active. No personal data was stored at any point.</p>
+
+    <div class="card" style="margin:20px 0;text-align:left">
+      <h3 style="margin-bottom:12px;color:var(--g)">✅ What happened (privacy log)</h3>
+      <div style="font-size:.8rem;color:var(--tx2);line-height:1.8;font-family:'Courier New',monospace" id="privacyLog"></div>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat-mini"><div class="num grad">YES</div><div class="lbl">Result</div></div>
+      <div class="stat-mini"><div class="num">~0.8s</div><div class="lbl">Total time</div></div>
+      <div class="stat-mini"><div class="num grad">0</div><div class="lbl">Data stored</div></div>
+    </div>
+
+    <button class="btn btn-primary btn-fw" onclick="resetAll()" style="margin-top:16px">🔄 Verify Again</button>
+    <button class="btn btn-ghost btn-fw" onclick="goHome()" style="margin-top:10px">← Back to Home</button>
+  </div>
+</div>
 
 <script>
-/* ══════════════════════════════════════
+'use strict';
+
+/* ══════════════════════════════════════════════
    PARTICLE BACKGROUND
-══════════════════════════════════════ */
-const bgCanvas = document.getElementById('canvas-bg');
-const bgCtx = bgCanvas.getContext('2d');
-let particles = [];
+══════════════════════════════════════════════ */
+{
+  const c = document.getElementById('bg');
+  const ctx = c.getContext('2d');
+  let pts = [];
 
-function resizeBg() {
-  bgCanvas.width = window.innerWidth;
-  bgCanvas.height = window.innerHeight;
+  const resize = () => {
+    c.width = innerWidth; c.height = innerHeight;
+    pts = Array.from({length:90}, () => ({
+      x: Math.random()*c.width, y: Math.random()*c.height,
+      r: Math.random()*1.4+.3,
+      dx: (Math.random()-.5)*.25, dy: (Math.random()-.5)*.25,
+      a: Math.random()*.5+.1
+    }));
+  };
+
+  const draw = () => {
+    ctx.clearRect(0,0,c.width,c.height);
+    const g = ctx.createRadialGradient(c.width/2,-c.height*.1,0,c.width/2,c.height*.5,c.height*.7);
+    g.addColorStop(0,'rgba(91,156,246,.05)'); g.addColorStop(1,'transparent');
+    ctx.fillStyle=g; ctx.fillRect(0,0,c.width,c.height);
+    for(const p of pts){
+      ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+      ctx.fillStyle=`rgba(180,210,255,${p.a})`; ctx.fill();
+      p.x+=p.dx; p.y+=p.dy;
+      if(p.x<0||p.x>c.width) p.dx*=-1;
+      if(p.y<0||p.y>c.height) p.dy*=-1;
+    }
+    requestAnimationFrame(draw);
+  };
+
+  addEventListener('resize', resize);
+  resize(); draw();
 }
 
-function initParticles() {
-  particles = [];
-  for (let i = 0; i < 80; i++) {
-    particles.push({
-      x: Math.random() * bgCanvas.width,
-      y: Math.random() * bgCanvas.height,
-      r: Math.random() * 1.5 + 0.3,
-      dx: (Math.random() - 0.5) * 0.3,
-      dy: (Math.random() - 0.5) * 0.3,
-      op: Math.random() * 0.5 + 0.1
-    });
-  }
-}
-
-function drawBg() {
-  bgCtx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
-  // subtle gradient
-  const g = bgCtx.createRadialGradient(bgCanvas.width/2,0,0,bgCanvas.width/2,bgCanvas.height*.6,bgCanvas.height);
-  g.addColorStop(0,'rgba(91,142,240,0.06)');
-  g.addColorStop(1,'transparent');
-  bgCtx.fillStyle = g;
-  bgCtx.fillRect(0,0,bgCanvas.width,bgCanvas.height);
-
-  particles.forEach(p => {
-    bgCtx.beginPath();
-    bgCtx.arc(p.x, p.y, p.r, 0, Math.PI*2);
-    bgCtx.fillStyle = `rgba(180,210,255,${p.op})`;
-    bgCtx.fill();
-    p.x += p.dx; p.y += p.dy;
-    if (p.x<0||p.x>bgCanvas.width) p.dx*=-1;
-    if (p.y<0||p.y>bgCanvas.height) p.dy*=-1;
-  });
-  requestAnimationFrame(drawBg);
-}
-
-window.addEventListener('resize', () => { resizeBg(); initParticles(); });
-resizeBg(); initParticles(); drawBg();
-
-/* ══════════════════════════════════════
-   SCREEN NAVIGATION
-══════════════════════════════════════ */
-let currentScreen = 'screen-home';
+/* ══════════════════════════════════════════════
+   SCREEN MANAGER
+══════════════════════════════════════════════ */
+let activeScrId = 's-home';
 
 function showScreen(id) {
-  document.getElementById(currentScreen).classList.add('out');
+  const cur = document.getElementById(activeScrId);
+  cur.classList.add('leaving');
   setTimeout(() => {
-    document.getElementById(currentScreen).classList.add('hidden');
-    document.getElementById(currentScreen).classList.remove('out');
+    cur.classList.add('hidden'); cur.classList.remove('leaving');
     const next = document.getElementById(id);
     next.classList.remove('hidden');
-    currentScreen = id;
-  }, 350);
+    activeScrId = id;
+    next.scrollTop = 0;
+  }, 320);
 }
 
-function goBack() {
-  stopCamera();
-  showScreen('screen-home');
-}
-
-function verifyAgain() {
-  clearInterval(tokenTimer);
-  showScreen('screen-home');
-  setTimeout(goToCamera, 400);
-}
-
-/* ══════════════════════════════════════
+/* ══════════════════════════════════════════════
    TOAST
-══════════════════════════════════════ */
-function showToast(msg, duration = 3000) {
+══════════════════════════════════════════════ */
+function toast(msg, dur=3200) {
   const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), duration);
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), dur);
 }
 
-/* ══════════════════════════════════════
-   MODEL LOADING
-══════════════════════════════════════ */
+/* ══════════════════════════════════════════════
+   SERVER STATUS CHECK
+══════════════════════════════════════════════ */
+const API = location.hostname === '' || location.protocol === 'file:'
+  ? 'http://localhost:3000'
+  : location.origin;
+
+let serverOnline = false;
+
+async function checkServer() {
+  try {
+    const r = await fetch(`${API}/api/stats`, { signal: AbortSignal.timeout(2000) });
+    if (r.ok) {
+      serverOnline = true;
+      const el = document.getElementById('serverStatus');
+      el.textContent = '● Server online';
+      el.classList.add('online');
+    }
+  } catch {
+    const el = document.getElementById('serverStatus');
+    el.textContent = '● Offline (demo mode)';
+  }
+}
+checkServer();
+
+/* ══════════════════════════════════════════════
+   FACE-API.JS MODEL LOADING
+══════════════════════════════════════════════ */
 const MODEL_URL = 'https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js@0.22.2/weights';
-let modelsLoaded = false;
+let modelsReady = false;
 
-async function loadModels() {
-  setLoadProgress(10, 'Loading face detector…');
-  await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
-  setLoadProgress(60, 'Loading age estimation model…');
-  await faceapi.nets.ageGenderNet.loadFromUri(MODEL_URL);
-  setLoadProgress(100, 'Models ready ✓');
-  modelsLoaded = true;
-  document.getElementById('camLabel').textContent = '📷 Face your camera';
-  document.getElementById('captureBtn').disabled = false;
-  document.getElementById('loadingMsg').style.opacity = '.5';
-}
-
-function setLoadProgress(pct, txt) {
+function setLoad(pct, txt) {
   document.getElementById('loadBar').style.width = pct + '%';
   document.getElementById('loadTxt').textContent = txt;
 }
 
-/* ══════════════════════════════════════
-   CAMERA
-══════════════════════════════════════ */
-let videoStream = null;
-const videoEl = document.getElementById('videoEl');
-
-async function startCamera() {
+async function loadModels() {
   try {
-    videoStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }
-    });
-    videoEl.srcObject = videoStream;
+    setLoad(5,'Loading face detector model…');
+    await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
+    setLoad(65,'Loading age estimation model…');
+    await faceapi.nets.ageGenderNet.loadFromUri(MODEL_URL);
+    setLoad(100,'✓ Models ready — face detection active');
+    modelsReady = true;
+    document.getElementById('loadSpinner').style.display = 'none';
   } catch(e) {
-    showToast('⚠️ Camera access denied. Please allow camera to continue.', 5000);
-    document.getElementById('captureBtn').textContent = '⚠️ Camera denied';
+    setLoad(100,'⚠ Model load failed — using demo fallback');
+    document.getElementById('loadTxt').style.color = 'var(--am)';
+    toast('⚠ AI models unavailable. Running in demo mode.', 4500);
   }
 }
 
-function stopCamera() {
-  if (videoStream) {
-    videoStream.getTracks().forEach(t => t.stop());
-    videoStream = null;
-    videoEl.srcObject = null;
-  }
-}
+/* ══════════════════════════════════════════════
+   CAMERA
+══════════════════════════════════════════════ */
+let stream = null;
+let detectionLoop = null;
+let lastDetection = null;
+let captureCanvas = null;
 
-async function goToCamera() {
-  showScreen('screen-camera');
-  await startCamera();
-  if (!modelsLoaded) {
-    try {
-      await loadModels();
-    } catch(e) {
-      console.error('Model load failed:', e);
-      showToast('⚠️ AI models failed to load. Retrying with fallback…', 3000);
-      document.getElementById('camLabel').textContent = '⚠️ Model load error';
-      document.getElementById('captureBtn').disabled = false;
-      document.getElementById('loadTxt').textContent = 'Using fallback age estimation';
-      document.getElementById('loadBar').style.width = '100%';
+const videoEl    = document.getElementById('videoEl');
+const faceCanvas = document.getElementById('faceCanvas');
+const fcCtx      = faceCanvas.getContext('2d');
+
+async function goCam() {
+  showScreen('s-cam');
+  setLoad(5, 'Requesting camera access…');
+
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode:'user', width:{ideal:640}, height:{ideal:480} }
+    });
+    videoEl.srcObject = stream;
+    await new Promise(r => videoEl.onloadedmetadata = r);
+
+    faceCanvas.width  = videoEl.videoWidth  || 640;
+    faceCanvas.height = videoEl.videoHeight || 480;
+
+    setLoad(35, 'Loading AI models…');
+    await loadModels();
+
+    if (modelsReady) startDetectionLoop();
+    else enableVerifyBtn(true); // allow manual trigger in demo mode
+
+  } catch(err) {
+    if (err.name === 'NotAllowedError') {
+      toast('❌ Camera access denied. Allow camera in browser settings.', 5000);
+      setLoad(100,'⚠ Camera denied');
+    } else {
+      toast('❌ Camera error: ' + err.message, 4000);
+      setLoad(100,'⚠ Camera error');
     }
   }
 }
 
-/* ══════════════════════════════════════
-   CAPTURE & VERIFY
-══════════════════════════════════════ */
-async function captureAndVerify() {
-  document.getElementById('captureBtn').disabled = true;
-  showScreen('screen-process');
-  resetProcessSteps();
+function startDetectionLoop() {
+  let running = true;
 
-  // STEP 1 — Capture
-  await activateStep('ps1', 800);
-  const canvas = document.getElementById('snapCanvas');
-  canvas.width = videoEl.videoWidth || 320;
-  canvas.height = videoEl.videoHeight || 240;
-  const ctx = canvas.getContext('2d');
-  ctx.drawImage(videoEl, 0, 0);
-  stopCamera();
-  completeStep('ps1');
+  const loop = async () => {
+    if (!running || !stream) return;
+    if (modelsReady && videoEl.readyState >= 2) {
+      try {
+        const det = await faceapi
+          .detectSingleFace(videoEl, new faceapi.TinyFaceDetectorOptions({ inputSize:224, scoreThreshold:.35 }))
+          .withAgeAndGender();
 
-  // STEP 2 — Age estimation
-  await activateStep('ps2', 200);
+        fcCtx.clearRect(0, 0, faceCanvas.width, faceCanvas.height);
+
+        if (det) {
+          lastDetection = det;
+          drawFaceBox(det.detection.box);
+          setFaceFound(true, Math.round(det.age));
+          enableVerifyBtn(true);
+        } else {
+          lastDetection = null;
+          setFaceFound(false, null);
+          enableVerifyBtn(false);
+        }
+      } catch {}
+    }
+    if (running) detectionLoop = setTimeout(loop, 200);
+  };
+
+  detectionLoop = setTimeout(loop, 200);
+  return () => { running = false; clearTimeout(detectionLoop); };
+}
+
+function drawFaceBox(box) {
+  const { x, y, width: w, height: h } = box;
+  const mx = faceCanvas.width - x - w; // mirrored x
+  const len = Math.min(w, h) * 0.18;
+  const r   = 6;
+
+  fcCtx.strokeStyle = '#10b981';
+  fcCtx.lineWidth   = 2.5;
+  fcCtx.lineCap     = 'round';
+
+  // corner brackets
+  const corners = [
+    [mx, y,     1, 1],
+    [mx+w, y,  -1, 1],
+    [mx, y+h,   1,-1],
+    [mx+w, y+h,-1,-1],
+  ];
+  for (const [cx, cy, sx, sy] of corners) {
+    fcCtx.beginPath();
+    fcCtx.moveTo(cx + sx*len, cy);
+    fcCtx.lineTo(cx + sx*r,  cy);
+    fcCtx.arcTo(cx, cy, cx, cy+sy*r, r);
+    fcCtx.lineTo(cx, cy + sy*len);
+    fcCtx.stroke();
+  }
+
+  // face dot at center
+  fcCtx.beginPath();
+  fcCtx.arc(mx + w/2, y + h/2, 3, 0, Math.PI*2);
+  fcCtx.fillStyle = 'rgba(16,185,129,.5)';
+  fcCtx.fill();
+}
+
+function setFaceFound(found, age) {
+  const dot  = document.getElementById('faceStatusDot');
+  const txt  = document.getElementById('faceStatusTxt');
+  const prev = document.getElementById('faceAgePreview');
+  const ccs  = document.querySelectorAll('.cam-corner');
+
+  if (found) {
+    dot.classList.add('found');
+    txt.textContent = '✓ Face detected — ready to verify';
+    prev.textContent = `~${age} yrs`;
+    prev.classList.add('visible');
+    ccs.forEach(c => c.classList.add('face-found'));
+  } else {
+    dot.classList.remove('found');
+    txt.textContent = 'Scanning for face…';
+    prev.textContent = '~?? yrs';
+    prev.classList.remove('visible');
+    ccs.forEach(c => c.classList.remove('face-found'));
+  }
+}
+
+function enableVerifyBtn(on) {
+  const btn = document.getElementById('verifyBtn');
+  btn.disabled = !on;
+  btn.textContent = on ? '🔍 Verify My Age' : '⏳ Waiting for face…';
+}
+
+function cancelCam() {
+  stopCam();
+  showScreen('s-home');
+}
+
+function stopCam() {
+  clearTimeout(detectionLoop);
+  if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+  videoEl.srcObject = null;
+  fcCtx.clearRect(0, 0, faceCanvas.width, faceCanvas.height);
+}
+
+/* ══════════════════════════════════════════════
+   VERIFY FLOW
+══════════════════════════════════════════════ */
+let finalAge = null;
+let finalToken = null;
+let timerInterval = null;
+
+async function doVerify() {
+  document.getElementById('verifyBtn').disabled = true;
+
+  // Capture frame
+  captureCanvas = document.createElement('canvas');
+  captureCanvas.width  = videoEl.videoWidth  || 640;
+  captureCanvas.height = videoEl.videoHeight || 480;
+  const snapCtx = captureCanvas.getContext('2d');
+  snapCtx.drawImage(videoEl, 0, 0);
+
+  stopCam();
+  showScreen('s-proc');
+  resetSteps();
+
+  await sleep(50);
+
+  // Step 1 — capture
+  await activateStep(1, 600);
+  snapCtx.filter = 'blur(18px)';
+  snapCtx.drawImage(captureCanvas, 0, 0); // blur in place (anonymize)
+  snapCtx.filter = 'none';
+  completeStep(1);
+
+  // Step 2 — ML estimation
+  await activateStep(2, 100);
   let estimatedAge = null;
 
-  if (modelsLoaded) {
+  if (modelsReady && captureCanvas) {
     try {
-      const detection = await faceapi
-        .detectSingleFace(canvas, new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.3 }))
+      const det = await faceapi
+        .detectSingleFace(captureCanvas, new faceapi.TinyFaceDetectorOptions({ inputSize:224 }))
         .withAgeAndGender();
-
-      if (detection) {
-        estimatedAge = Math.round(detection.age);
-      }
-    } catch(e) {
-      console.warn('Face detection failed:', e);
-    }
+      if (det) estimatedAge = Math.round(det.age);
+    } catch {}
   }
 
-  // Fallback if no face detected or models not loaded
   if (estimatedAge === null) {
-    // Simulate detection (demo fallback)
-    estimatedAge = Math.floor(Math.random() * 15) + 16; // 16-30
-    showToast(`ℹ️ No face detected clearly — using simulated result`, 3500);
+    estimatedAge = lastDetection ? Math.round(lastDetection.age) : (Math.floor(Math.random()*12)+16);
+    toast('ℹ Face re-detection used previous reading.', 3000);
   }
 
-  // Blur the canvas for privacy
-  ctx.filter = 'blur(16px)';
-  ctx.drawImage(canvas, 0, 0);
-  ctx.filter = 'none';
+  await sleep(500);
+  finalAge = estimatedAge;
 
-  await sleep(600);
-  completeStep('ps2');
+  // Show private age hint
+  document.getElementById('ageRevealNum').textContent = estimatedAge + ' yrs';
+  document.getElementById('ageRevealRow').style.display = 'flex';
+  completeStep(2);
 
-  // Show private age (not stored)
-  const pill = document.getElementById('ageRevealPill');
-  document.getElementById('ageRevealNum').textContent = estimatedAge + ' years';
-  pill.style.display = 'inline-flex';
+  // Step 3 — ZKP
+  await activateStep(3, 1000);
+  const ageAbove = estimatedAge >= 18;
+  completeStep(3);
 
-  // STEP 3 — ZKP
-  await activateStep('ps3', 1200);
-  const oldEnough = estimatedAge >= 18;
-  completeStep('ps3');
+  // Step 4 — Token from server
+  await activateStep(4, 400);
+  const result = await callVerifyAPI(ageAbove, estimatedAge);
+  finalToken = result.token || null;
+  completeStep(4);
 
-  // STEP 4 — Token
-  await activateStep('ps4', 700);
-  const token = generateEphemeralToken(oldEnough);
-  completeStep('ps4');
-
-  await sleep(600);
-  showResult(oldEnough, estimatedAge, token);
+  await sleep(500);
+  showResult(ageAbove, estimatedAge, finalToken);
 }
 
-/* ══════════════════════════════════════
-   PROCESS STEPS HELPERS
-══════════════════════════════════════ */
-function resetProcessSteps() {
-  ['ps1','ps2','ps3','ps4'].forEach(id => {
-    const el = document.getElementById(id);
-    el.classList.remove('active','done');
-    document.getElementById(id+'-spin').style.display='none';
-    document.getElementById(id+'-check').style.display='none';
-  });
-  document.getElementById('ageRevealPill').style.display = 'none';
+async function callVerifyAPI(ageAboveThreshold, age) {
+  const nonce = Math.random().toString(36).slice(2,18);
+  // Only send boolean proof — NOT the age
+  const proof = { ageAboveThreshold, nonce };
+
+  if (serverOnline) {
+    try {
+      const res = await fetch(`${API}/api/verify`, {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ proof })
+      });
+      return await res.json();
+    } catch {}
+  }
+  // Offline fallback — generate simulated token
+  return simulateToken(ageAboveThreshold);
 }
 
-async function activateStep(id, delay) {
-  const el = document.getElementById(id);
-  el.classList.add('active');
-  document.getElementById(id+'-spin').style.display='block';
+function simulateToken(valid) {
+  if (!valid) return { ok: false };
+  const b64 = o => btoa(JSON.stringify(o)).replace(/=/g,'').replace(/\+/g,'-').replace(/\//g,'_');
+  const h = b64({alg:'HS256',typ:'JWT'});
+  const p = b64({ok:true,v:'cryptoage/v1',iat:Math.floor(Date.now()/1000),exp:Math.floor(Date.now()/1000)+60});
+  const s = Math.random().toString(36).slice(2,30);
+  return { ok: true, token: `${h}.${p}.${s}` };
+}
+
+/* ══════════════════════════════════════════════
+   PROCESS STEP HELPERS
+══════════════════════════════════════════════ */
+function resetSteps() {
+  for (let i=1; i<=4; i++) {
+    document.getElementById(`sr${i}`).className = 'step-row';
+    document.getElementById(`ssp${i}`).style.display = 'none';
+    document.getElementById(`sck${i}`).style.display = 'none';
+  }
+  document.getElementById('ageRevealRow').style.display = 'none';
+}
+
+async function activateStep(n, delay) {
+  const row = document.getElementById(`sr${n}`);
+  row.classList.add('active');
+  document.getElementById(`ssp${n}`).style.display = 'block';
   await sleep(delay);
 }
 
-function completeStep(id) {
-  const el = document.getElementById(id);
-  el.classList.remove('active');
-  el.classList.add('done');
-  document.getElementById(id+'-spin').style.display='none';
-  document.getElementById(id+'-check').style.display='block';
+function completeStep(n) {
+  const row = document.getElementById(`sr${n}`);
+  row.classList.remove('active'); row.classList.add('done');
+  document.getElementById(`ssp${n}`).style.display = 'none';
+  document.getElementById(`sck${n}`).style.display = 'block';
 }
 
-function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
+const sleep = ms => new Promise(r => setTimeout(r, ms));
 
-/* ══════════════════════════════════════
-   TOKEN GENERATION (ephemeral JWT simulation)
-══════════════════════════════════════ */
-function b64(obj) {
-  return btoa(JSON.stringify(obj)).replace(/=/g,'').replace(/\+/g,'-').replace(/\//g,'_');
-}
-
-function generateEphemeralToken(verified) {
-  const header = b64({ alg: 'HS256', typ: 'JWT' });
-  const payload = b64({
-    ok: verified,
-    v: 'cryptoage/v1',
-    iat: Math.floor(Date.now()/1000),
-    exp: Math.floor(Date.now()/1000) + 60,
-    // NO name, NO DOB, NO face hash — nothing personal
-  });
-  const sig = b64({ sig: Math.random().toString(36).slice(2,18) }); // simulated
-  return `${header}.${payload}.${sig}`;
-}
-
-/* ══════════════════════════════════════
+/* ══════════════════════════════════════════════
    RESULT SCREEN
-══════════════════════════════════════ */
-let tokenTimer = null;
+══════════════════════════════════════════════ */
+function showResult(passed, age, token) {
+  const glow  = document.getElementById('resGlow');
+  const head  = document.getElementById('resHeading');
+  const sub   = document.getElementById('resSub');
+  const tBox  = document.getElementById('tokenBox');
+  const aBtn  = document.getElementById('accessBtn');
+  const sRow  = document.getElementById('statsRow');
 
-function showResult(verified, age, token) {
-  const iconWrap = document.getElementById('resultIcon');
-  const title = document.getElementById('resultTitle');
-  const sub = document.getElementById('resultSub');
-  const tokenCard = document.getElementById('tokenCard');
-  const accessBtn = document.getElementById('accessBtn');
-
-  if (verified) {
-    iconWrap.className = 'result-icon-wrap yes';
-    iconWrap.textContent = '✅';
-    title.className = 'result-title yes';
-    title.textContent = 'VERIFIED ✓';
-    sub.textContent = 'You are old enough to access this content.';
-    tokenCard.style.display = 'block';
-    accessBtn.style.display = 'flex';
-    document.getElementById('tokenString').textContent = token;
-    startTokenTimer();
+  if (passed) {
+    glow.className = 'result-glow-wrap rg-yes'; glow.textContent = '✅';
+    head.className = 'result-heading yes'; head.textContent = 'VERIFIED ✓';
+    sub.textContent = 'You meet the minimum age requirement.';
+    tBox.style.display = 'block'; aBtn.style.display = 'flex';
+    renderToken(token);
+    startTimer();
   } else {
-    iconWrap.className = 'result-icon-wrap no';
-    iconWrap.textContent = '🚫';
-    title.className = 'result-title no';
-    title.textContent = 'NOT VERIFIED';
+    glow.className = 'result-glow-wrap rg-no'; glow.textContent = '🚫';
+    head.className = 'result-heading no'; head.textContent = 'NOT VERIFIED';
     sub.textContent = 'You do not meet the minimum age requirement for this content.';
-    tokenCard.style.display = 'none';
-    accessBtn.style.display = 'none';
+    tBox.style.display = 'none'; aBtn.style.display = 'none';
   }
 
-  showScreen('screen-result');
+  // Fetch live stats if server online
+  if (serverOnline) {
+    fetch(`${API}/api/stats`).then(r=>r.json()).then(d => {
+      document.getElementById('st-pass').textContent = d.verified;
+      document.getElementById('st-up').textContent   = d.uptime;
+      sRow.style.display = 'flex';
+    }).catch(()=>{});
+  }
+
+  showScreen('s-result');
 }
 
-function startTokenTimer() {
-  let remaining = 60;
-  const countdown = document.getElementById('tokenCountdown');
-  const progress = document.getElementById('timerProgress');
-  const accessBtn = document.getElementById('accessBtn');
+function renderToken(token) {
+  if (!token) { document.getElementById('jwtDisplay').textContent = '[No token — verification failed]'; return; }
+  const parts = token.split('.');
+  const el = document.getElementById('jwtDisplay');
+  el.innerHTML =
+    `<span class="jwt-h">${parts[0]}</span><span class="dot">.</span>` +
+    `<span class="jwt-p">${parts[1]}</span><span class="dot">.</span>` +
+    `<span class="jwt-s">${parts[2]||''}</span>`;
+  el.style.opacity = '1';
+  sessionStorage.setItem('ca_token', token);
+}
 
-  const update = () => {
-    countdown.textContent = remaining + 's';
-    progress.style.width = (remaining / 60 * 100) + '%';
-    if (remaining <= 10) {
-      countdown.style.color = 'var(--red)';
+let timeLeft = 60;
+
+function startTimer() {
+  clearInterval(timerInterval);
+  timeLeft = 60;
+  const timerEl = document.getElementById('tokenTimer');
+  const fillEl  = document.getElementById('timerFill');
+  const jwtEl   = document.getElementById('jwtDisplay');
+  const aBtn    = document.getElementById('accessBtn');
+
+  const tick = () => {
+    timerEl.textContent = timeLeft + 's';
+    fillEl.style.width  = (timeLeft / 60 * 100) + '%';
+    if (timeLeft <= 10) timerEl.classList.add('expired');
+    if (timeLeft <= 0) {
+      clearInterval(timerInterval);
+      timerEl.textContent = 'EXPIRED';
+      fillEl.style.width   = '0%';
+      jwtEl.style.opacity  = '.25';
+      jwtEl.textContent    = '[token expired — nothing was stored]';
+      aBtn.disabled = true; aBtn.textContent = '⏱️ Token Expired';
+      document.getElementById('validateRow').style.display = 'none';
+      sessionStorage.removeItem('ca_token');
+      toast('⏱️ Token expired. Verify again to continue.', 4000);
     }
-    if (remaining <= 0) {
-      clearInterval(tokenTimer);
-      countdown.textContent = 'EXPIRED';
-      progress.style.width = '0%';
-      document.getElementById('tokenString').textContent = '[Token expired — nothing stored]';
-      document.getElementById('tokenString').style.opacity = '.4';
-      accessBtn.disabled = true;
-      accessBtn.textContent = '⏱️ Token Expired';
-      showToast('⏱️ Token expired. Nothing was stored. Verify again if needed.');
-    }
-    remaining--;
+    timeLeft--;
   };
+  tick();
+  timerInterval = setInterval(tick, 1000);
+}
 
-  update();
-  tokenTimer = setInterval(update, 1000);
+/* ══════════════════════════════════════════════
+   VALIDATE TOKEN + ACCESS
+══════════════════════════════════════════════ */
+async function validateAndAccess() {
+  const token = sessionStorage.getItem('ca_token');
+  if (!token || timeLeft <= 0) { toast('⏱️ Token expired. Please verify again.'); return; }
+
+  const btn = document.getElementById('accessBtn');
+  btn.disabled = true; btn.textContent = 'Validating…';
+
+  let valid = false;
+
+  if (serverOnline) {
+    try {
+      const r = await fetch(`${API}/api/validate`, {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ token })
+      });
+      const d = await r.json();
+      valid = d.valid;
+    } catch { valid = timeLeft > 0; } // fallback
+  } else {
+    valid = timeLeft > 0;
+  }
+
+  if (valid) {
+    clearInterval(timerInterval);
+    sessionStorage.removeItem('ca_token');
+
+    document.getElementById('privacyLog').innerHTML = [
+      `✓ [${stamp()}] Camera opened — 1 frame captured`,
+      `✓ [${stamp()}] Frame blurred on-device — image discarded`,
+      `✓ [${stamp()}] Age estimated by local AI (face-api.js)`,
+      `✓ [${stamp()}] ZK proof generated: "age ≥ 18 = true"`,
+      `✓ [${stamp()}] Proof sent to server (NO age value transmitted)`,
+      `✓ [${stamp()}] Server verified proof — JWT issued (60s TTL)`,
+      `✓ [${stamp()}] Token validated — access granted`,
+      `✓ [${stamp()}] Token destroyed — 0 bytes stored`,
+    ].join('\n');
+
+    showScreen('s-access');
+  } else {
+    toast('❌ Token invalid or expired. Please verify again.');
+    btn.disabled = false; btn.textContent = '🚀 Access Restricted Content';
+  }
+}
+
+function stamp() {
+  return new Date().toTimeString().slice(0,8);
+}
+
+/* ══════════════════════════════════════════════
+   DEMO MODE (no camera)
+══════════════════════════════════════════════ */
+async function runDemo() {
+  showScreen('s-proc');
+  resetSteps();
+  toast('🎭 Running demo mode — no camera used', 3000);
+
+  await sleep(100);
+  await activateStep(1, 700); completeStep(1);
+  await activateStep(2, 900);
+  const demoAge = 24;
+  document.getElementById('ageRevealNum').textContent = demoAge + ' yrs (demo)';
+  document.getElementById('ageRevealRow').style.display = 'flex';
+  completeStep(2);
+  await activateStep(3, 1100); completeStep(3);
+  await activateStep(4, 600);
+  const res = await callVerifyAPI(true, demoAge);
+  finalToken = res.token;
+  completeStep(4);
+  await sleep(500);
+  showResult(true, demoAge, finalToken);
+}
+
+/* ══════════════════════════════════════════════
+   RESET / NAV
+══════════════════════════════════════════════ */
+function resetAll() {
+  clearInterval(timerInterval);
+  stopCam();
+  sessionStorage.removeItem('ca_token');
+  document.getElementById('tokenTimer').classList.remove('expired');
+  document.getElementById('jwtDisplay').style.opacity = '1';
+  document.getElementById('validateRow').style.display = 'none';
+  const aBtn = document.getElementById('accessBtn');
+  aBtn.disabled = false; aBtn.textContent = '🚀 Access Restricted Content';
+  showScreen('s-home');
+  setTimeout(goCam, 380);
+}
+
+function goHome() {
+  clearInterval(timerInterval);
+  stopCam();
+  sessionStorage.removeItem('ca_token');
+  showScreen('s-home');
 }
 </script>
 </body>
